@@ -153,7 +153,7 @@ impl FormatFunction {
                 write!(f, [space(), id.format()])?;
             }
             None => {
-                write!(f, [space()])?;
+                // write!(f, [space()])?;
             }
         }
 
