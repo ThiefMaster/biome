@@ -53,6 +53,11 @@ impl FormatNodeRule<JsCallArguments> for FormatJsCallArguments {
                     )
                 });
 
+        let is_react_composition_call = call_expression
+            .as_ref()
+            .map_or(Ok(false), |call| is_react_composition_call(call))
+            .unwrap_or(false);
+
         let is_first_arg_string_literal_or_template = if args.len() != 2 {
             true
         } else {
@@ -108,7 +113,7 @@ impl FormatNodeRule<JsCallArguments> for FormatJsCallArguments {
             })
             .collect();
 
-        if has_empty_line || is_function_composition_args(node) {
+        if has_empty_line || is_react_composition_call || is_function_composition_args(node) {
             return write!(
                 f,
                 [FormatAllArgsBrokenOut {
@@ -1118,6 +1123,15 @@ fn can_group_expression_argument(
     };
 
     Ok(result)
+}
+
+/// Tests if this is a call to a react-related composition function
+fn is_react_composition_call(call: &JsCallExpression) -> SyntaxResult<bool> {
+    let Some(reference) = call.callee()?.as_js_reference_identifier() else {
+        return Ok(false);
+    };
+
+    Ok(reference.name()?.text() == "createSelector")
 }
 
 /// Tests if this is a call to commonjs [`require`](https://nodejs.org/api/modules.html#requireid)
