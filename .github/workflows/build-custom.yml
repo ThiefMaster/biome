@@ -1,0 +1,120 @@
+name: Build custom binaries
+
+on:
+  push:
+    branches:
+      - custom
+
+permissions:
+  contents: read
+
+env:
+  # TODO get from tag
+  BIOME_VERSION: 2.2.0
+
+jobs:
+  build-binaries:
+    strategy:
+      matrix:
+        include:
+          # - os: ubuntu-24.04
+          #   target: x86_64-unknown-linux-musl
+          #   code-target: linux-x64-musl
+          # - os: ubuntu-24.04-arm
+          #   target: aarch64-unknown-linux-musl
+          #   code-target: linux-arm64-musl
+          - os: macos-14
+            target: x86_64-apple-darwin
+            code-target: darwin-x64
+          - os: macos-14
+            target: aarch64-apple-darwin
+            code-target: darwin-arm64
+
+    name: Package ${{ matrix.code-target }}
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Install musl toolchain
+        if: matrix.code-target == 'linux-x64-musl' || matrix.code-target == 'linux-arm64-musl'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
+      # Build the CLI binary
+      - name: Build binaries
+        run: cargo build -p biome_cli --release --target ${{ matrix.target }}
+        env:
+          # Strip all debug symbols from the resulting binaries
+          RUSTFLAGS: "-C strip=symbols -C codegen-units=1"
+          # Inline the version of the npm package in the CLI binary
+          BIOME_VERSION: ${{ env.BIOME_VERSION }}
+
+      - name: Copy CLI binary
+        run: |
+          mkdir dist
+          cp target/${{ matrix.target }}/release/biome ./dist/biome-${{ matrix.code-target }}
+
+      # Upload the CLI binary as a build artifact
+      - name: Upload CLI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-${{ matrix.target }}
+          path: ./dist/biome-*
+          if-no-files-found: error
+
+  # Build GNU/Linux binaries in Docker, using Debian 11 (bullseye), to support older versions of glibc.
+  build-binaries-gnu:
+    env:
+      RUST_BACKTRACE: 1
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            code-target: linux-x64
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            code-target: linux-arm64
+
+    name: Package ${{ matrix.code-target }}
+    runs-on: ${{ matrix.os }}
+    container:
+      image: rust:1.89.0-bullseye
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set jemalloc page size for linux-arm64
+        if: matrix.code-target == 'linux-arm64'
+        run: |
+          echo "JEMALLOC_SYS_WITH_LG_PAGE=16" >> $GITHUB_ENV
+
+      # Build the CLI binary
+      - name: Build binaries
+        run: cargo build -p biome_cli --release --target ${{ matrix.target }}
+        env:
+          # Strip all debug symbols from the resulting binaries
+          RUSTFLAGS: "-C strip=symbols -C codegen-units=1"
+          # Inline the version of the npm package in the CLI binary
+          BIOME_VERSION: ${{ env.BIOME_VERSION }}
+
+      # Copy the CLI binary and rename it to include the name of the target platform
+      - name: Copy CLI binary
+        run: |
+          mkdir dist
+          cp target/${{ matrix.target }}/release/biome ./dist/biome-${{ matrix.code-target }}
+
+      # Upload the CLI binary as a build artifact
+      - name: Upload CLI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-${{ matrix.target }}
+          path: ./dist/biome-*
+          if-no-files-found: error
