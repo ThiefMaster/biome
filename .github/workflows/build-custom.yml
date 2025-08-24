@@ -2,13 +2,14 @@ name: Build custom binaries
 
 on:
   push:
-    branches:
-      - custom
+    tags:
+      - 'custom-*'
 
 permissions:
   contents: read
 
 env:
+  # TODO get from tag
   BIOME_VERSION: 2.2.2
 
 jobs:
