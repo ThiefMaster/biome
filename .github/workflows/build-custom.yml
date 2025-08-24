@@ -119,8 +119,8 @@ jobs:
           path: ./dist/biome-*
           if-no-files-found: error
 
-  publish-cli:
-    name: Publish CLI
+  publish-npm:
+    name: Publish to NPM
     runs-on: ubuntu-24.04
     needs:
       - build-binaries
