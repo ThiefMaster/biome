@@ -9,8 +9,7 @@ permissions:
   contents: read
 
 env:
-  # TODO get from tag
-  BIOME_VERSION: 2.2.0
+  BIOME_VERSION: 2.2.2
 
 jobs:
   build-binaries:
@@ -118,3 +117,35 @@ jobs:
           name: cli-${{ matrix.target }}
           path: ./dist/biome-*
           if-no-files-found: error
+
+  publish-cli:
+    name: Publish CLI
+    runs-on: ubuntu-24.04
+    needs:
+      - build-binaries
+      - build-binaries-gnu
+    environment: publish
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download CLI artifacts
+        uses: actions/download-artifact@v5
+        with:
+          pattern: cli-*
+          merge-multiple: true
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Generate npm packages
+        run: node packages/@thiefmaster/generate-packages.mjs
+
+      - name: Publish npm packages as latest
+        run: |
+          for package in packages/@thiefmaster/biome-cli-*; do
+            npm publish $package --tag latest --access public --provenance
+          done

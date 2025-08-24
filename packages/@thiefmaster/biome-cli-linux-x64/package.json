@@ -1,0 +1,26 @@
+{
+  "name": "@thiefmaster/biome-cli-linux-x64",
+  "version": "2.2.2",
+  "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ThiefMaster/biome.git",
+    "directory": "packages/@thiefmaster/biome-cli-linux-x64"
+  },
+  "engines": {
+    "node": ">=14.21.3"
+  },
+  "homepage": "https://biomejs.dev",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "libc": [
+    "glibc"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
